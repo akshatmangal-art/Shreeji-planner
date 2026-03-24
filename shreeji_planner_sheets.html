@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Akshat's Planner — Shreeji International</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F7F5F0;
+    --surface: #FFFFFF;
+    --surface2: #F0EDE6;
+    --accent: #1A3A2A;
+    --accent2: #4A7C5F;
+    --accent-light: #E8F0EB;
+    --text: #1C1C1C;
+    --text-muted: #7A7A72;
+    --border: #DDD9CF;
+    --danger: #C0392B;
+    --warn: #D68910;
+    --ok: #27AE60;
+    --radius: 12px;
+    --shadow: 0 2px 16px rgba(26,58,42,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* ── SETUP SCREEN ── */
+  #setup-screen {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; padding: 24px;
+  }
+  .setup-card {
+    background: var(--surface); border-radius: 16px; padding: 36px 32px;
+    max-width: 480px; width: 100%; box-shadow: 0 8px 40px rgba(26,58,42,0.14);
+    border: 1px solid var(--border);
+  }
+  .setup-logo { font-family: 'Playfair Display', serif; font-size: 1.5rem; color: var(--accent); margin-bottom: 4px; }
+  .setup-sub { font-size: 0.75rem; color: var(--text-muted); letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 28px; }
+  .setup-card h2 { font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; }
+  .setup-card p { font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 18px; }
+  .setup-steps { background: var(--surface2); border-radius: 10px; padding: 16px 18px; margin-bottom: 22px; }
+  .setup-steps ol { padding-left: 18px; }
+  .setup-steps li { font-size: 0.82rem; line-height: 1.7; color: var(--text); margin-bottom: 2px; }
+  .setup-steps li strong { color: var(--accent); }
+  .setup-steps code { background: #e8e4da; padding: 1px 6px; border-radius: 4px; font-size: 0.78rem; }
+  .url-input {
+    width: 100%; padding: 12px 14px; border-radius: 9px;
+    border: 1.5px solid var(--border); font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem; background: var(--bg); color: var(--text);
+    outline: none; margin-bottom: 12px;
+  }
+  .url-input:focus { border-color: var(--accent2); background: #fff; }
+  .url-input::placeholder { color: #bbb; }
+
+  /* ── HEADER ── */
+  #app { display: none; }
+  header {
+    background: var(--accent); color: #fff;
+    padding: 16px 20px 12px;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .header-left h1 { font-family: 'Playfair Display', serif; font-size: 1.2rem; }
+  .header-left p { font-size: 0.68rem; opacity: 0.6; letter-spacing: 1.3px; text-transform: uppercase; margin-top: 1px; }
+  .header-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  #today-badge { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 4px 11px; font-size: 0.72rem; font-weight: 500; }
+  #sync-indicator { font-size: 0.72rem; opacity: 0.75; display: flex; align-items: center; gap: 5px; }
+  .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); display: inline-block; }
+  .sync-dot.syncing { background: var(--warn); animation: pulse 0.8s infinite; }
+  .sync-dot.error { background: var(--danger); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* ── TABS ── */
+  .tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab-btn { flex-shrink: 0; padding: 12px 18px; border: none; background: none; font-family: 'DM Sans', sans-serif; font-size: 0.82rem; font-weight: 500; color: var(--text-muted); cursor: pointer; border-bottom: 2.5px solid transparent; transition: all 0.2s; }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  .tab-btn:hover:not(.active) { color: var(--text); background: var(--surface2); }
+
+  /* ── MAIN ── */
+  main { max-width: 860px; margin: 0 auto; padding: 20px 16px 90px; }
+  .panel { display: none; } .panel.active { display: block; }
+
+  /* ── STATS ── */
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 18px; }
+  .stat-card { background: var(--surface); border-radius: var(--radius); padding: 13px 15px; border: 1px solid var(--border); box-shadow: var(--shadow); }
+  .stat-num { font-family: 'Playfair Display', serif; font-size: 1.7rem; font-weight: 700; color: var(--accent); line-height: 1; margin-bottom: 3px; }
+  .stat-label { font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; }
+
+  /* ── ADD FORM ── */
+  .add-box { background: var(--surface); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); margin-bottom: 18px; border: 1px solid var(--border); }
+  .add-box-title { font-size: 0.74rem; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 11px; }
+  .form-row { display: flex; gap: 9px; flex-wrap: wrap; }
+  .form-row input, .form-row select, .form-row textarea {
+    font-family: 'DM Sans', sans-serif; font-size: 0.87rem;
+    border: 1.5px solid var(--border); border-radius: 8px; padding: 9px 12px;
+    background: var(--bg); color: var(--text); outline: none; transition: border 0.15s;
+  }
+  .form-row input:focus, .form-row select:focus, .form-row textarea:focus { border-color: var(--accent2); background: #fff; }
+  .f-task { flex: 2; min-width: 160px; } .f-cat { min-width: 128px; } .f-pri { min-width: 108px; } .f-date { min-width: 138px; }
+  .form-row textarea { width: 100%; min-height: 56px; resize: vertical; }
+
+  /* ── BUTTONS ── */
+  .btn { font-family: 'DM Sans', sans-serif; font-size: 0.84rem; font-weight: 600; border: none; border-radius: 8px; padding: 10px 18px; cursor: pointer; transition: all 0.15s; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent2); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-sm { padding: 5px 11px; font-size: 0.74rem; }
+  .btn-ghost { background: none; border: 1.5px solid var(--border); color: var(--text-muted); }
+  .btn-ghost:hover { border-color: var(--accent2); color: var(--accent); }
+  .btn-danger { background: #fdf0ee; border: 1.5px solid #f5c6c0; color: var(--danger); }
+  .btn-danger:hover { background: var(--danger); color: #fff; }
+
+  /* ── FILTERS ── */
+  .section-title { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--accent); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .section-title .dot { width: 7px; height: 7px; background: var(--accent2); border-radius: 50%; }
+  .filters { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 14px; }
+  .filter-chip { padding: 4px 13px; border-radius: 20px; font-size: 0.76rem; font-weight: 500; border: 1.5px solid var(--border); background: var(--surface); color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
+  .filter-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* ── TASK CARDS ── */
+  .task-list { display: flex; flex-direction: column; gap: 9px; }
+  .task-card { background: var(--surface); border-radius: var(--radius); padding: 13px 15px; box-shadow: var(--shadow); border: 1.5px solid var(--border); border-left: 4px solid var(--border); transition: all 0.2s; animation: slideIn 0.2s ease; }
+  @keyframes slideIn { from { opacity:0; transform:translateY(-5px); } to { opacity:1; transform:translateY(0); } }
+  .task-card.pri-high { border-left-color: var(--danger); }
+  .task-card.pri-medium { border-left-color: var(--warn); }
+  .task-card.pri-low { border-left-color: var(--ok); }
+  .task-card.done { opacity: 0.5; }
+  .task-card.done .task-title { text-decoration: line-through; }
+  .task-top { display: flex; align-items: flex-start; gap: 11px; }
+  .task-check { width: 20px; height: 20px; border: 2px solid var(--border); border-radius: 50%; cursor: pointer; flex-shrink: 0; margin-top: 2px; transition: all 0.15s; display: flex; align-items: center; justify-content: center; background: none; }
+  .task-check.checked { background: var(--ok); border-color: var(--ok); }
+  .task-check.checked::after { content: '✓'; color: #fff; font-size: 11px; font-weight: 700; }
+  .task-check.loading { background: var(--warn); border-color: var(--warn); animation: pulse 0.6s infinite; }
+  .task-body { flex: 1; min-width: 0; }
+  .task-title { font-size: 0.9rem; font-weight: 500; margin-bottom: 3px; }
+  .task-note { font-size: 0.77rem; color: var(--text-muted); margin-bottom: 5px; line-height: 1.45; }
+  .task-meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .tag { font-size: 0.68rem; font-weight: 600; padding: 2px 8px; border-radius: 20px; letter-spacing: 0.3px; }
+  .tag-cat { background: var(--accent-light); color: var(--accent2); }
+  .tag-date { background: #f0f0f0; color: var(--text-muted); }
+  .tag-overdue { background: #fdf0ee; color: var(--danger); }
+  .tag-today { background: #fef9e7; color: var(--warn); }
+  .task-actions { display: flex; gap: 5px; flex-shrink: 0; }
+
+  /* ── EMPTY ── */
+  .empty { text-align: center; padding: 44px 20px; color: var(--text-muted); }
+  .empty .empty-icon { font-size: 2.2rem; margin-bottom: 10px; }
+  .empty p { font-size: 0.85rem; }
+
+  /* ── WEEK GRID ── */
+  .week-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 7px; margin-bottom: 18px; }
+  .day-col { background: var(--surface); border-radius: 10px; border: 1.5px solid var(--border); overflow: hidden; box-shadow: var(--shadow); }
+  .day-col.today-col { border-color: var(--accent2); }
+  .day-header { background: var(--surface2); padding: 7px 5px; text-align: center; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+  .day-col.today-col .day-header { background: var(--accent); color: #fff; }
+  .day-date { text-align: center; font-family: 'Playfair Display', serif; font-size: 1.05rem; font-weight: 700; color: var(--accent); padding: 5px 4px 2px; }
+  .day-tasks { padding: 5px; min-height: 50px; }
+  .day-task-dot { font-size: 0.65rem; padding: 3px 5px; border-radius: 5px; margin-bottom: 3px; background: var(--accent-light); color: var(--accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+  .day-task-dot.pri-high { background: #fdf0ee; color: var(--danger); }
+  .day-task-dot.pri-medium { background: #fef9e7; color: #a0690a; }
+  .day-task-dot.done-dot { opacity: 0.38; text-decoration: line-through; }
+
+  /* ── NOTES ── */
+  .note-box { background: var(--surface); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); border: 1px solid var(--border); margin-bottom: 14px; }
+  .note-box label { font-size: 0.74rem; font-weight: 600; color: var(--text-muted); letter-spacing: 0.8px; text-transform: uppercase; display: block; margin-bottom: 7px; }
+  .note-box textarea { font-family: 'DM Sans', sans-serif; font-size: 0.88rem; width: 100%; min-height: 100px; border: 1.5px solid var(--border); border-radius: 8px; padding: 10px 12px; background: var(--bg); color: var(--text); outline: none; resize: vertical; transition: border 0.15s; line-height: 1.55; }
+  .note-box textarea:focus { border-color: var(--accent2); background: #fff; }
+  .note-save-row { display: flex; align-items: center; gap: 10px; margin-top: 7px; }
+  .note-saved-msg { font-size: 0.74rem; color: var(--ok); opacity: 0; transition: opacity 0.3s; }
+  .note-saved-msg.show { opacity: 1; }
+
+  /* ── LOADING OVERLAY ── */
+  #loader { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 999; }
+  #loader .spin { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; margin-bottom: 14px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #loader p { font-size: 0.82rem; color: var(--text-muted); }
+
+  /* ── TOAST ── */
+  .toast { position: fixed; bottom: 76px; left: 50%; transform: translateX(-50%) translateY(8px); background: var(--accent); color: #fff; padding: 9px 20px; border-radius: 24px; font-size: 0.8rem; font-weight: 500; opacity: 0; transition: all 0.3s; z-index: 300; pointer-events: none; white-space: nowrap; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.error-toast { background: var(--danger); }
+
+  /* ── FAB ── */
+  .fab { display: none; position: fixed; bottom: 18px; right: 18px; width: 50px; height: 50px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 1.4rem; border: none; box-shadow: 0 4px 16px rgba(26,58,42,0.3); cursor: pointer; align-items: center; justify-content: center; z-index: 200; }
+  @media (max-width: 600px) { .fab { display: flex; } }
+  @media (max-width: 600px) { .week-grid { grid-template-columns: repeat(3,1fr); } .form-row { flex-direction: column; } .f-task,.f-cat,.f-pri,.f-date { min-width: 100%; } }
+  @media (max-width: 380px) { .week-grid { grid-template-columns: repeat(2,1fr); } }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ SETUP SCREEN ═══════════════ -->
+<div id="setup-screen">
+  <div class="setup-card">
+    <div class="setup-logo">Shreeji Planner</div>
+    <div class="setup-sub">One-time setup required</div>
+    <h2>Connect to Google Sheets</h2>
+    <p>Your planner data will be stored in your own Google Sheet — free, private, and synced across all devices.</p>
+
+    <div class="setup-steps">
+      <ol>
+        <li>Go to <strong>script.google.com</strong> → New Project</li>
+        <li>Delete any existing code, paste the contents of <strong>Code.gs</strong></li>
+        <li>Click <strong>Deploy → New Deployment</strong></li>
+        <li>Type: <code>Web app</code> · Execute as: <code>Me</code> · Access: <code>Anyone</code></li>
+        <li>Click Deploy → Authorize → Copy the <strong>Web App URL</strong></li>
+        <li>Paste it below 👇</li>
+      </ol>
+    </div>
+
+    <input class="url-input" type="url" id="webapp-url" placeholder="https://script.google.com/macros/s/YOUR_ID/exec" />
+    <button class="btn btn-primary" style="width:100%" onclick="saveWebAppUrl()">Connect & Launch Planner</button>
+    <p style="margin-top:12px; font-size:0.73rem; color:var(--text-muted); text-align:center;">Already set up? <a href="#" onclick="loadFromStorage()" style="color:var(--accent2);">Load saved URL</a></p>
+  </div>
+</div>
+
+<!-- ═══════════════ LOADER ═══════════════ -->
+<div id="loader" style="display:none">
+  <div class="spin"></div>
+  <p>Connecting to your Google Sheet…</p>
+</div>
+
+<!-- ═══════════════ MAIN APP ═══════════════ -->
+<div id="app">
+  <header>
+    <div class="header-left">
+      <h1>Akshat's Planner</h1>
+      <p>Shreeji International</p>
+    </div>
+    <div class="header-right">
+      <div id="sync-indicator"><span class="sync-dot" id="sync-dot"></span> <span id="sync-label">Synced</span></div>
+      <div id="today-badge"></div>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="showTab('today',this)">📋 Today</button>
+    <button class="tab-btn" onclick="showTab('all',this)">📂 All Tasks</button>
+    <button class="tab-btn" onclick="showTab('week',this)">📅 Week</button>
+    <button class="tab-btn" onclick="showTab('notes',this)">📝 Notes</button>
+    <button class="tab-btn" onclick="showTab('settings',this)">⚙️</button>
+  </div>
+
+  <main>
+    <!-- TODAY -->
+    <div class="panel active" id="tab-today">
+      <div class="stats-row" id="stats-row"></div>
+      <div class="add-box" id="add-box-today">
+        <div class="add-box-title">+ Quick Add for Today</div>
+        <div class="form-row">
+          <input class="f-task" type="text" id="t-title" placeholder="What needs to be done?" maxlength="150" onkeydown="if(event.key==='Enter') addTask('today')" />
+          <select class="f-cat" id="t-cat">
+            <option value="Factory">🏭 Factory</option>
+            <option value="Export">📦 Export</option>
+            <option value="Sales">💼 Sales</option>
+            <option value="Accounts">💰 Accounts</option>
+            <option value="Team">👥 Team</option>
+            <option value="Personal">🏠 Personal</option>
+            <option value="Follow-up">📞 Follow-up</option>
+            <option value="Other">📌 Other</option>
+          </select>
+          <select class="f-pri" id="t-pri">
+            <option value="high">🔴 High</option>
+            <option value="medium" selected>🟡 Medium</option>
+            <option value="low">🟢 Low</option>
+          </select>
+        </div>
+        <div class="form-row" style="margin-top:8px;">
+          <textarea id="t-note" placeholder="Notes / details (optional)…"></textarea>
+        </div>
+        <div style="margin-top:9px; display:flex; gap:8px;">
+          <button class="btn btn-primary" id="add-btn-today" onclick="addTask('today')">Add Task</button>
+          <button class="btn btn-ghost btn-sm" onclick="clearForm('t')">Clear</button>
+        </div>
+      </div>
+      <div class="section-title"><span class="dot"></span> Today's Tasks</div>
+      <div class="filters">
+        <span class="filter-chip active" onclick="setFilter('all',this,'today')">All</span>
+        <span class="filter-chip" onclick="setFilter('pending',this,'today')">Pending</span>
+        <span class="filter-chip" onclick="setFilter('done',this,'today')">Done</span>
+        <span class="filter-chip" onclick="setFilter('high',this,'today')">🔴 High</span>
+        <span class="filter-chip" onclick="setFilter('Factory',this,'today')">🏭 Factory</span>
+        <span class="filter-chip" onclick="setFilter('Export',this,'today')">📦 Export</span>
+      </div>
+      <div class="task-list" id="today-list"></div>
+    </div>
+
+    <!-- ALL TASKS -->
+    <div class="panel" id="tab-all">
+      <div class="add-box">
+        <div class="add-box-title">+ Add Task (Any Date)</div>
+        <div class="form-row">
+          <input class="f-task" type="text" id="a-title" placeholder="Task description…" maxlength="150" onkeydown="if(event.key==='Enter') addTask('all')" />
+          <input class="f-date" type="date" id="a-date" />
+          <select class="f-cat" id="a-cat">
+            <option value="Factory">🏭 Factory</option><option value="Export">📦 Export</option>
+            <option value="Sales">💼 Sales</option><option value="Accounts">💰 Accounts</option>
+            <option value="Team">👥 Team</option><option value="Personal">🏠 Personal</option>
+            <option value="Follow-up">📞 Follow-up</option><option value="Other">📌 Other</option>
+          </select>
+          <select class="f-pri" id="a-pri">
+            <option value="high">🔴 High</option><option value="medium" selected>🟡 Medium</option><option value="low">🟢 Low</option>
+          </select>
+        </div>
+        <div class="form-row" style="margin-top:8px;">
+          <textarea id="a-note" placeholder="Notes (optional)…"></textarea>
+        </div>
+        <div style="margin-top:9px;">
+          <button class="btn btn-primary" id="add-btn-all" onclick="addTask('all')">Add Task</button>
+        </div>
+      </div>
+      <div class="section-title"><span class="dot"></span> All Tasks</div>
+      <div class="filters" id="all-filters">
+        <span class="filter-chip active" onclick="setFilter('all',this,'all')">All</span>
+        <span class="filter-chip" onclick="setFilter('pending',this,'all')">Pending</span>
+        <span class="filter-chip" onclick="setFilter('done',this,'all')">Done</span>
+        <span class="filter-chip" onclick="setFilter('overdue',this,'all')">⚠️ Overdue</span>
+        <span class="filter-chip" onclick="setFilter('high',this,'all')">🔴 High</span>
+      </div>
+      <div class="task-list" id="all-list"></div>
+    </div>
+
+    <!-- WEEK -->
+    <div class="panel" id="tab-week">
+      <div class="section-title"><span class="dot"></span> Weekly Overview</div>
+      <div class="week-grid" id="week-grid"></div>
+    </div>
+
+    <!-- NOTES -->
+    <div class="panel" id="tab-notes">
+      <div class="section-title"><span class="dot"></span> Quick Notes</div>
+      <div class="note-box"><label>📌 Today's Focus</label><textarea id="note-focus" placeholder="What's the most important thing today…"></textarea><div class="note-save-row"><button class="btn btn-primary btn-sm" onclick="saveNote('note-focus',this)">Save</button><span class="note-saved-msg">Saved ✓</span></div></div>
+      <div class="note-box"><label>🏭 Factory Notes (Palghar)</label><textarea id="note-factory" placeholder="Production targets, machine issues, pending orders…"></textarea><div class="note-save-row"><button class="btn btn-primary btn-sm" onclick="saveNote('note-factory',this)">Save</button><span class="note-saved-msg">Saved ✓</span></div></div>
+      <div class="note-box"><label>📦 Export / Clients</label><textarea id="note-export" placeholder="Shipment deadlines, client follow-ups, sample status…"></textarea><div class="note-save-row"><button class="btn btn-primary btn-sm" onclick="saveNote('note-export',this)">Save</button><span class="note-saved-msg">Saved ✓</span></div></div>
+      <div class="note-box"><label>💡 Ideas & Later List</label><textarea id="note-ideas" placeholder="Business ideas, things to explore later…"></textarea><div class="note-save-row"><button class="btn btn-primary btn-sm" onclick="saveNote('note-ideas',this)">Save</button><span class="note-saved-msg">Saved ✓</span></div></div>
+      <div class="note-box"><label>🏠 Personal / Family</label><textarea id="note-personal" placeholder="Reyansh, Tanush, Sonal — family reminders…"></textarea><div class="note-save-row"><button class="btn btn-primary btn-sm" onclick="saveNote('note-personal',this)">Save</button><span class="note-saved-msg">Saved ✓</span></div></div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="panel" id="tab-settings">
+      <div class="section-title"><span class="dot"></span> Settings</div>
+      <div class="add-box">
+        <div class="add-box-title">Google Apps Script URL</div>
+        <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:12px;">Update your Web App URL if you redeploy the script.</p>
+        <input class="url-input" type="url" id="settings-url" style="border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;font-family:DM Sans,sans-serif;font-size:0.82rem;width:100%;background:var(--bg);" placeholder="https://script.google.com/macros/s/…/exec" />
+        <div style="margin-top:10px;display:flex;gap:8px;">
+          <button class="btn btn-primary" onclick="updateUrl()">Update URL</button>
+          <button class="btn btn-ghost btn-sm" onclick="refreshData()">🔄 Refresh Data</button>
+        </div>
+      </div>
+      <div class="add-box" style="margin-top:14px;">
+        <div class="add-box-title">About</div>
+        <p style="font-size:0.82rem;color:var(--text-muted);line-height:1.65;">All data is stored in your own Google Sheet. To view it directly, open <a href="https://sheets.google.com" target="_blank" style="color:var(--accent2);">sheets.google.com</a> and look for the sheet your Apps Script is bound to.</p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<button class="fab" onclick="scrollToAdd()">+</button>
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══ STATE ═══════════════════════════════════════════
+let tasks = [];
+let WEB_APP_URL = '';
+let todayFilter = 'all';
+let allFilter   = 'all';
+const URL_KEY   = 'shreeji_webapp_url';
+const CACHE_KEY = 'shreeji_task_cache';
+
+// ═══ DATE UTILS ══════════════════════════════════════
+function toDateStr(d) { return d.toISOString().split('T')[0]; }
+const TODAY = toDateStr(new Date());
+
+function formatDisplay(ds) {
+  if (!ds) return '';
+  const d = new Date(ds + 'T00:00:00');
+  return d.toLocaleDateString('en-IN', { day:'numeric', month:'short' });
+}
+function isOverdue(t) { return t.date && t.date < TODAY && !t.done; }
+function isToday(t)   { return t.date === TODAY; }
+
+// ═══ SETUP ═══════════════════════════════════════════
+function loadFromStorage() {
+  const saved = localStorage.getItem(URL_KEY);
+  if (saved) { document.getElementById('webapp-url').value = saved; saveWebAppUrl(); }
+  else showToast('No saved URL found', true);
+}
+
+function saveWebAppUrl() {
+  const url = document.getElementById('webapp-url').value.trim();
+  if (!url.includes('script.google.com')) { showToast('Please enter a valid Apps Script URL', true); return; }
+  WEB_APP_URL = url;
+  localStorage.setItem(URL_KEY, url);
+  launchApp();
+}
+
+function updateUrl() {
+  const url = document.getElementById('settings-url').value.trim();
+  if (!url.includes('script.google.com')) { showToast('Invalid URL', true); return; }
+  WEB_APP_URL = url;
+  localStorage.setItem(URL_KEY, url);
+  showToast('URL updated ✓');
+  refreshData();
+}
+
+function launchApp() {
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('loader').style.display = 'flex';
+  document.getElementById('settings-url').value = WEB_APP_URL;
+  refreshData();
+}
+
+// ═══ API ══════════════════════════════════════════════
+function setSyncing(state) {
+  const dot = document.getElementById('sync-dot');
+  const lbl = document.getElementById('sync-label');
+  if (state === 'syncing') { dot.className='sync-dot syncing'; lbl.textContent='Syncing…'; }
+  else if (state === 'error') { dot.className='sync-dot error'; lbl.textContent='Error'; }
+  else { dot.className='sync-dot'; lbl.textContent='Synced'; }
+}
+
+async function apiGet(action) {
+  const res = await fetch(`${WEB_APP_URL}?action=${action}&t=${Date.now()}`);
+  return res.json();
+}
+
+async function apiPost(body) {
+  const res = await fetch(WEB_APP_URL, {
+    method: 'POST',
+    body: JSON.stringify(body)
+  });
+  return res.json();
+}
+
+async function refreshData() {
+  setSyncing('syncing');
+  try {
+    const [taskRes, noteRes] = await Promise.all([apiGet('getTasks'), apiGet('getNotes')]);
+    if (!taskRes.ok) throw new Error(taskRes.error);
+    tasks = taskRes.tasks || [];
+    // cache locally for offline resilience
+    localStorage.setItem(CACHE_KEY, JSON.stringify(tasks));
+
+    // fill notes
+    const notes = noteRes.notes || {};
+    Object.keys(notes).forEach(k => {
+      const el = document.getElementById(k);
+      if (el) el.value = notes[k];
+    });
+
+    setSyncing('ok');
+    document.getElementById('loader').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    updateDateBadge();
+    renderAll();
+  } catch(e) {
+    setSyncing('error');
+    // fallback to cache
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) { tasks = JSON.parse(cached); renderAll(); }
+    document.getElementById('loader').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    updateDateBadge();
+    showToast('Could not reach sheet — showing cached data', true);
+  }
+}
+
+// ═══ TASK OPS ════════════════════════════════════════
+async function addTask(source) {
+  const p = source === 'today' ? 't' : 'a';
+  const titleEl = document.getElementById(p+'-title');
+  const title = titleEl.value.trim();
+  if (!title) { showToast('Please enter a task title', true); return; }
+
+  const task = {
+    id: Date.now(),
+    title,
+    note:      document.getElementById(p+'-note')?.value.trim() || '',
+    cat:       document.getElementById(p+'-cat').value,
+    pri:       document.getElementById(p+'-pri').value,
+    date:      source === 'today' ? TODAY : (document.getElementById('a-date')?.value || TODAY),
+    done:      false,
+    createdAt: new Date().toISOString()
+  };
+
+  // optimistic
+  tasks.unshift(task);
+  renderAll();
+  clearForm(p);
+  setSyncing('syncing');
+
+  try {
+    const r = await apiPost({ action:'addTask', task });
+    if (!r.ok) throw new Error(r.error);
+    setSyncing('ok');
+    showToast('Task added ✓');
+  } catch(e) {
+    setSyncing('error');
+    showToast('Saved locally — will sync when online', true);
+  }
+  localStorage.setItem(CACHE_KEY, JSON.stringify(tasks));
+}
+
+async function toggleDone(id) {
+  const t = tasks.find(x => x.id == id);
+  if (!t) return;
+
+  // optimistic
+  t.done = !t.done;
+  renderAll();
+  setSyncing('syncing');
+
+  try {
+    const r = await apiPost({ action:'toggleDone', id });
+    if (!r.ok) throw new Error(r.error);
+    setSyncing('ok');
+  } catch(e) {
+    setSyncing('error');
+    showToast('Sync issue — changes saved locally', true);
+  }
+  localStorage.setItem(CACHE_KEY, JSON.stringify(tasks));
+}
+
+async function deleteTask(id) {
+  if (!confirm('Delete this task?')) return;
+  tasks = tasks.filter(x => x.id != id);
+  renderAll();
+  setSyncing('syncing');
+
+  try {
+    const r = await apiPost({ action:'deleteTask', id });
+    if (!r.ok) throw new Error(r.error);
+    setSyncing('ok');
+    showToast('Task deleted');
+  } catch(e) {
+    setSyncing('error');
+  }
+  localStorage.setItem(CACHE_KEY, JSON.stringify(tasks));
+}
+
+async function saveNote(noteId, btn) {
+  const val = document.getElementById(noteId)?.value || '';
+  setSyncing('syncing');
+  try {
+    const r = await apiPost({ action:'saveNote', key: noteId, value: val });
+    if (!r.ok) throw new Error(r.error);
+    setSyncing('ok');
+    const msg = btn.nextElementSibling;
+    if (msg) { msg.classList.add('show'); setTimeout(()=>msg.classList.remove('show'), 2000); }
+  } catch(e) {
+    setSyncing('error');
+    showToast('Sync issue', true);
+  }
+}
+
+// ═══ FILTERS ═════════════════════════════════════════
+function setFilter(f, el, scope) {
+  if (scope==='today') todayFilter = f;
+  else allFilter = f;
+  el.closest('.filters').querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  if (scope==='today') renderToday();
+  else renderAllList();
+}
+
+function applyFilter(arr, filter) {
+  switch(filter) {
+    case 'pending': return arr.filter(t=>!t.done);
+    case 'done':    return arr.filter(t=>t.done);
+    case 'high':    return arr.filter(t=>t.pri==='high'&&!t.done);
+    case 'overdue': return arr.filter(t=>isOverdue(t));
+    case 'Factory': case 'Export': return arr.filter(t=>t.cat===filter);
+    default: return arr;
+  }
+}
+
+// ═══ RENDER ══════════════════════════════════════════
+function renderAll() { renderStats(); renderToday(); renderAllList(); renderWeek(); }
+
+function renderStats() {
+  const tt = tasks.filter(t=>t.date===TODAY);
+  const done = tt.filter(t=>t.done).length;
+  const pending = tt.filter(t=>!t.done).length;
+  const overdue = tasks.filter(t=>isOverdue(t)).length;
+  const high = tasks.filter(t=>t.pri==='high'&&!t.done).length;
+  document.getElementById('stats-row').innerHTML = `
+    <div class="stat-card"><div class="stat-num">${pending}</div><div class="stat-label">Pending Today</div></div>
+    <div class="stat-card"><div class="stat-num">${done}</div><div class="stat-label">Done Today</div></div>
+    <div class="stat-card" style="${overdue>0?'border-color:#f5c6c0':''}">
+      <div class="stat-num" style="color:${overdue>0?'var(--danger)':'var(--accent)'}">${overdue}</div>
+      <div class="stat-label">Overdue</div>
+    </div>
+    <div class="stat-card"><div class="stat-num">${high}</div><div class="stat-label">High Priority</div></div>`;
+}
+
+function taskCardHTML(t) {
+  const ov = isOverdue(t), tod = isToday(t);
+  let dateBadge = '';
+  if (t.date) {
+    if (ov) dateBadge = `<span class="tag tag-overdue">⚠️ Overdue · ${formatDisplay(t.date)}</span>`;
+    else if (tod) dateBadge = `<span class="tag tag-today">📅 Today</span>`;
+    else dateBadge = `<span class="tag tag-date">📅 ${formatDisplay(t.date)}</span>`;
+  }
+  const priLabel = {high:'🔴 High', medium:'🟡 Med', low:'🟢 Low'}[t.pri]||'';
+  return `
+    <div class="task-card pri-${t.pri} ${t.done?'done':''}" id="tc-${t.id}">
+      <div class="task-top">
+        <div class="task-check ${t.done?'checked':''}" onclick="toggleDone(${t.id})"></div>
+        <div class="task-body">
+          <div class="task-title">${escHtml(t.title)}</div>
+          ${t.note?`<div class="task-note">${escHtml(t.note)}</div>`:''}
+          <div class="task-meta">
+            <span class="tag tag-cat">${escHtml(t.cat)}</span>
+            ${dateBadge}
+            <span class="tag" style="background:#f5f5f5;color:#888">${priLabel}</span>
+          </div>
+        </div>
+        <div class="task-actions">
+          <button class="btn btn-danger btn-sm" onclick="deleteTask(${t.id})">✕</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderToday() {
+  const filtered = applyFilter(tasks.filter(t=>t.date===TODAY), todayFilter);
+  filtered.sort((a,b)=>{ if(a.done!==b.done) return a.done?1:-1; const p={high:0,medium:1,low:2}; return p[a.pri]-p[b.pri]; });
+  const c = document.getElementById('today-list');
+  c.innerHTML = filtered.length ? filtered.map(taskCardHTML).join('') :
+    `<div class="empty"><div class="empty-icon">✅</div><p>${todayFilter==='done'?'No tasks done yet.':'No tasks — add one above!'}</p></div>`;
+}
+
+function renderAllList() {
+  const filtered = applyFilter([...tasks], allFilter);
+  filtered.sort((a,b)=>{ if(a.done!==b.done) return a.done?1:-1; if(a.date&&b.date) return a.date<b.date?-1:1; return 0; });
+  const c = document.getElementById('all-list');
+  c.innerHTML = filtered.length ? filtered.map(taskCardHTML).join('') :
+    `<div class="empty"><div class="empty-icon">📂</div><p>No tasks found.</p></div>`;
+}
+
+function renderWeek() {
+  const grid = document.getElementById('week-grid');
+  const now = new Date();
+  const dow = now.getDay();
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - (dow===0?6:dow-1));
+  const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  let html = '';
+  for (let i=0; i<7; i++) {
+    const d = new Date(monday); d.setDate(monday.getDate()+i);
+    const ds = toDateStr(d);
+    const isT = ds===TODAY;
+    const dt = tasks.filter(t=>t.date===ds);
+    const dots = dt.slice(0,4).map(t=>`<div class="day-task-dot pri-${t.pri} ${t.done?'done-dot':''}" title="${escHtml(t.title)}">${escHtml(t.title.length>14?t.title.slice(0,13)+'…':t.title)}</div>`).join('');
+    const more = dt.length>4?`<div style="font-size:0.62rem;color:var(--text-muted);padding:2px 5px">+${dt.length-4} more</div>`:'';
+    html += `<div class="day-col ${isT?'today-col':''}"><div class="day-header">${days[i]}</div><div class="day-date">${d.getDate()}</div><div class="day-tasks">${dots}${more}${dt.length===0?'<div style="font-size:0.62rem;color:var(--border);padding:3px 5px">—</div>':''}</div></div>`;
+  }
+  grid.innerHTML = html;
+}
+
+// ═══ TABS ════════════════════════════════════════════
+function showTab(name, btn) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  btn.classList.add('active');
+  if (name==='week') renderWeek();
+  if (name==='settings') document.getElementById('settings-url').value = WEB_APP_URL;
+}
+
+// ═══ UTILS ═══════════════════════════════════════════
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function clearForm(p) {
+  ['title','note'].forEach(f=>{ const el=document.getElementById(p+'-'+f); if(el) el.value=''; });
+}
+
+function scrollToAdd() {
+  document.getElementById('add-box-today')?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function updateDateBadge() {
+  document.getElementById('today-badge').textContent = new Date().toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short'});
+  const adEl = document.getElementById('a-date');
+  if (adEl) adEl.value = TODAY;
+}
+
+function showToast(msg, isErr=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (isErr?' error-toast':'');
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2400);
+}
+
+// ═══ INIT ════════════════════════════════════════════
+const savedUrl = localStorage.getItem(URL_KEY);
+if (savedUrl) {
+  WEB_APP_URL = savedUrl;
+  document.getElementById('webapp-url').value = savedUrl;
+  launchApp();
+}
+</script>
+</body>
+</html>
